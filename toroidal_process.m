@@ -35,6 +35,9 @@ dim = 3;
 % Standoff ranges (meters)
 txrange = 3;
 rxrange = 3;
+tx_jitter = 0.01; % (meters)
+rx_jitter = 0.01; % (meters)
+lock_platform_jitter = 0; % Nonzero if rx and tx jitter components are identical; rx_jitter is ignored in that case
 
 % Scatterer relative rotation angle (deg)
 offset_angle=28;
@@ -90,6 +93,20 @@ txloc_m=[txrange*cos(theta_platform/m),txrange*sin(theta_platform/m)];
 rxloc_m=[rxrange*cos(theta_platform/m),rxrange*sin(theta_platform/m)];
 txloc_n=[txrange*cos(theta_platform/n),txrange*sin(theta_platform/n)];
 rxloc_n=[rxrange*cos(theta_platform/n),rxrange*sin(theta_platform/n)];
+
+% Add platform jitter
+tx_jitter_sig=tx_jitter*randn(size(txloc));
+if( lock_platform_jitter )
+  rx_jitter_sig=tx_jitter_sig;
+else
+  rx_jitter_sig=rx_jitter*randn(size(rxloc));
+end
+txloc=txloc+tx_jitter_sig;
+txloc_m=txloc_m+tx_jitter_sig;
+txloc_n=txloc_n+tx_jitter_sig;
+rxloc=rxloc+rx_jitter_sig;
+rxloc_m=rxloc_m+rx_jitter_sig;
+rxloc_n=rxloc_n+rx_jitter_sig;
 
 % Construct toroidal coordinates for each transmitter and receiver location
 txtoroidal=mod([theta_platform*n, theta_platform*m],2*pi);
