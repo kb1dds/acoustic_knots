@@ -50,19 +50,32 @@ frequencies=linspace(0,600,nfrequencies+1);
 frequencies(1)=[];
 
 % Scatterer configuration
+% Scatterers are in 2d as collections of points
+% There are three such "composite" scatterers:
+%  two lie at the vertices of regular polygons (with m and n sides)
+%  the third is the sum of the other two
+% A jitter parameter allows points to deviate from their true positions by a specified amount
 m = 2; % Winding number
-theta_m=(0:2*pi/m:2*pi).';
-theta_m=theta_m(1:m);
-radius_m=1;
+radius_m=1; % (meters)
 n = 3; % Winding number
-theta_n=offset_angle*pi/180+(0:2*pi/n:2*pi).';
-theta_n=theta_n(1:n);
-radius_n=1;
-scatloc_m=[radius_m*cos(theta_m),radius_m*sin(theta_m)];
-scatloc_n=[radius_n*cos(theta_n),radius_n*sin(theta_n)];
-scatloc=[scatloc_m; scatloc_n];
+radius_n=1; % (meters)
+jitter=0.01; % (meters, variance)
+
+% Receiver noise level
+noise_level=0.0001; % Variance
 
 %% You should not need to change code below this line if you are just experimenting with parameters!
+
+% Scatterer locations
+theta_m=(0:2*pi/m:2*pi).';
+theta_m=theta_m(1:m);
+theta_n=offset_angle*pi/180+(0:2*pi/n:2*pi).';
+theta_n=theta_n(1:n);
+scatloc_m=[radius_m*cos(theta_m),radius_m*sin(theta_m)];
+scatloc_m=scatloc_m+randn(size(scatloc_m))*jitter;
+scatloc_n=[radius_n*cos(theta_n),radius_n*sin(theta_n)];
+scatloc_n=scatloc_n+randn(size(scatloc_n))*jitter;
+scatloc=[scatloc_m; scatloc_n];
 
 % Construct scatterer cross sections
 scatcross_m=ones(size(scatloc_m,1),1);
@@ -88,6 +101,8 @@ echos=zeros(nlooks,length(frequencies));
 echos_m_torus=zeros(length(theta_platform),length(frequencies));
 echos_n_torus=zeros(length(theta_platform),length(frequencies));
 for i=1:length(frequencies)
+  %% First scatterer: regular m-polygon with scatterers at its corners
+  
   % Propagate from transmitter locations to scatterers
   tx2scat_m=isotropicMatrix(c/frequencies(i),txloc,scatloc_m);
  
@@ -96,6 +111,8 @@ for i=1:length(frequencies)
 
   % Store noiseless frequency response
   echos_m(:,i)=diag(scat2rx_m*bsxfun(@times,scatcross_m,tx2scat_m));
+
+  %% Second scatterer: regular n-polygon with scatterers at its corners
   
   % Propagate from transmitter locations to scatterers
   tx2scat_n=isotropicMatrix(c/frequencies(i),txloc,scatloc_n);
@@ -105,6 +122,9 @@ for i=1:length(frequencies)
 
   % Store noiseless frequency response
   echos_n(:,i)=diag(scat2rx_n*bsxfun(@times,scatcross_n,tx2scat_n));
+
+  %% Third scatterer: sum of the above.
+  % (Note: we could have reused the code above, but didn't for clarity)
   
   % Propagate from transmitter locations to scatterers
   tx2scat=isotropicMatrix(c/frequencies(i),txloc,scatloc);
@@ -115,7 +135,7 @@ for i=1:length(frequencies)
   % Store noiseless frequency response
   echos(:,i)=diag(scat2rx*bsxfun(@times,scatcross,tx2scat));
   
-  %% Compute overall data (for the space of targets) from which our data is a slice
+  %% Compute overall data (for the space of targets) from which our data above is a slice
   
   % Propagate from transmitter locations to scatterers
   tx2scat_m_torus=isotropicMatrix(c/frequencies(i),txloc_m,scatloc_m);
@@ -138,6 +158,12 @@ end
 
 % Compute the full torus response
 echos_torus=bsxfun(@plus,reshape(echos_n_torus,1,[],length(frequencies)),reshape(echos_m_torus,[],1,length(frequencies)));
+
+% Add noise
+echos_m=echos_m+randn(size(echos_m))*noise_level;
+echos_n=echos_n+randn(size(echos_n))*noise_level;
+echos=echos+randn(size(echos))*noise_level;
+echos_torus=echos_torus+randn(size(echos_torus))*noise_level;
 
 %% Plotting code below this line!
 
