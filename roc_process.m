@@ -43,6 +43,9 @@ offset_angle=28;
 % Number of measurements to collect
 nlooks = 200;
 
+% Sliding window size
+window_size = 20;
+
 % Number of frequencies to collect
 nfrequencies = 61;
 
@@ -54,7 +57,7 @@ frequencies=linspace(0,bandwidth,nfrequencies+1);
 frequencies(1)=[];
 
 fp=fopen('roc_results.csv','wt');
-fprintf(fp,'bandwidth,SNR,nlooks,txrange,rxrange,jitter,eccentricity,diameter,diameter_ratio,rcs_ratio,offset,true_m,true_n,knotify_m,knotify_n\n');
+fprintf(fp,'bandwidth,SNR,nlooks,txrange,rxrange,jitter,eccentricity,diameter,diameter_ratio,rcs_ratio,offset,true_m,true_n,knotify_m,knotify_n,alex_poly_computed\n');
 
 % Scatterer configuration
 % Scatterers are in 2d as collections of points
@@ -95,8 +98,8 @@ rxloc_clean=[rxrange*cos(theta_platform),rxrange*sin(theta_platform)];
 
 correct_classifications=zeros(numel(jitters),numel(tx_jitters),numel(noise_levels),ntrials);
 			    
-for trial=1:ntrials,
-  for idx_jitter=1:numel(jitters),
+for trial=1:1%ntrials,
+  for idx_jitter=1:1%numel(jitters),
     jitter=jitters(idx_jitter);
 
     % Add scatterer jitter
@@ -124,7 +127,7 @@ for trial=1:ntrials,
         echos_clean(:,i)=diag(scat2rx*bsxfun(@times,scatcross,tx2scat));
       end
 
-      for idx_noise_level=1:numel(noise_levels),
+      for idx_noise_level=1:1%numel(noise_levels),
 	noise_level=noise_levels(idx_noise_level);
 	
         % Add receiver noise
@@ -133,19 +136,26 @@ for trial=1:ntrials,
 	% SNR
 	rx_snr=10*log10(sum(abs(echos_clean(:)).^2)/noise_level);
 
+	% Update the plots
 	subplot(1,3,1);
 	imagesc(abs(echos))
 
 	subplot(1,3,2);
 	imagesc(abs(fft(echos,[],1)))
 
+	% Apply sliding window aggregation
+	echos_ac=echos;
+	for ws=1:window_size,
+	  echos=[echos, circshift(echos_ac,[ws,0])];
+	end
+
 	% Perform torus knot transform
 	knf=knotify(echos,1:2*max([m,n]),1:2*max([m,n]));
 
 	subplot(1,3,3);
 	imagesc(knf);
-	pause(0.05)
-	
+	%pause(0.05)
+
 	% Identify local minimum
 	[jnk,idx]=min(knf(:));
 	[r,c]=ind2sub(size(knf),idx);
@@ -154,8 +164,15 @@ for trial=1:ntrials,
 	  r=c;
 	  c=r2;
 	end
+	
+        % Compute Alexander polynomial for the knot via external call
+	csvwrite('signal.csv',[real(echos) imag(echos)]);
+	system('python3 knot_invariants.py signal.csv temp.txt');
+	fp2=fopen('temp.txt','rt');
+	alex_poly=fgetl(fp2);
+	fclose(fp2);
 
-	fprintf(fp,'%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%d,%d,%d,%d\n',bandwidth,rx_snr,nlooks,txrange,rxrange,tx_jitter,1,max(radius_m,radius_n),max(radius_m,radius_n)/min(radius_m,radius_n),0,offset_angle,m,n,r,c);
+	fprintf(fp,'%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%d,%d,%d,%d,%s\n',bandwidth,rx_snr,nlooks,txrange,rxrange,tx_jitter,1,max(radius_m,radius_n),max(radius_m,radius_n)/min(radius_m,radius_n),0,offset_angle,m,n,r,c,alex_poly);
 
 	% Is the local minimum the correct knot type?
 	correct=((r==m)&&(c==n))||((r==n)&&(c==m));
