@@ -36,7 +36,7 @@ ks=zeros(numel(ps),numel(qs));
 signal_=fft(signal,[],1);
 
 % Compute original signal power
-ns=norm(signal_).^2;
+ns=sum(abs(signal_(:)).^2);
 
 for i=1:numel(ps),
   p=ps(i);
@@ -44,13 +44,11 @@ for i=1:numel(ps),
     q=qs(j);
     
     % Construct filter tuned for winding number p
-    p_idx = p.*(1:ceil(size(signal_,1)/p/2));
-    p_idx = [p_idx+1 size(signal_,1)-p_idx(end:-1:1)+1]; % Symmetrize
+    p_idx = [p+1 size(signal_,1)-p]; % Symmetrized
     
     % Construct filter tuned for winding number q
-    q_idx = q.*(1:ceil(size(signal_,1)/q/2));
-    q_idx = [q_idx+1 size(signal_,1)-q_idx(end:-1:1)+1]; % Symmetrize
-   
+    q_idx = [q+1 size(signal_,1)-q]; % Symmetrized
+
     % Apply notch filter to remove signal with winding numbers (p,q)
     signal_d=signal_;
     signal_d(p_idx,:)=0;

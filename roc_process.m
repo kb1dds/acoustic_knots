@@ -44,11 +44,17 @@ offset_angle=28;
 nlooks = 200;
 
 % Number of frequencies to collect
-nfrequencies = 60;
+nfrequencies = 61;
+
+% Pulse bandwidth
+bandwidth=600;
 
 % Frequencies to examine (Hertz)
-frequencies=linspace(0,600,nfrequencies+1);
+frequencies=linspace(0,bandwidth,nfrequencies+1);
 frequencies(1)=[];
+
+fp=fopen('roc_results.csv','wt');
+fprintf(fp,'bandwidth,SNR,nlooks,txrange,rxrange,jitter,eccentricity,diameter,diameter_ratio,rcs_ratio,offset,true_m,true_n,knotify_m,knotify_n\n');
 
 % Scatterer configuration
 % Scatterers are in 2d as collections of points
@@ -63,10 +69,10 @@ radius_n=1; % (meters)
 jitters=[0.01]; % (meters, variance)
 
 % Receiver noise level
-noise_levels=logspace(-5,3,20); % Variance
+noise_levels=logspace(-5,5,20); % Variance
 
 % Number of trials for statistical test
-ntrials=2;
+ntrials=10;
 
 %% You should not need to change code below this line if you are just experimenting with parameters!
 
@@ -122,17 +128,37 @@ for trial=1:ntrials,
 	noise_level=noise_levels(idx_noise_level);
 	
         % Add receiver noise
-        echos=echos_clean+randn(size(echos_clean))*noise_level;
+        echos=echos_clean+(randn(size(echos_clean))+sqrt(-1)*randn(size(echos_clean)))*noise_level/sqrt(2);
+
+	% SNR
+	rx_snr=10*log10(sum(abs(echos_clean(:)).^2)/noise_level);
+
+	subplot(1,3,1);
+	imagesc(abs(echos))
+
+	subplot(1,3,2);
+	imagesc(abs(fft(echos,[],1)))
 
 	% Perform torus knot transform
-	knf=knotify(echos,2:2*max([m,n]),2:2*max([m,n]));
+	knf=knotify(echos,1:2*max([m,n]),1:2*max([m,n]));
 
+	subplot(1,3,3);
+	imagesc(knf);
+	pause(0.05)
+	
 	% Identify local minimum
 	[jnk,idx]=min(knf(:));
 	[r,c]=ind2sub(size(knf),idx);
+	if( r > c ) % Standardize winding numbers on being ordered
+	  r2=r;
+	  r=c;
+	  c=r2;
+	end
+
+	fprintf(fp,'%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%d,%d,%d,%d\n',bandwidth,rx_snr,nlooks,txrange,rxrange,tx_jitter,1,max(radius_m,radius_n),max(radius_m,radius_n)/min(radius_m,radius_n),0,offset_angle,m,n,r,c);
 
 	% Is the local minimum the correct knot type?
-	correct=((r+1==m)&&(c+1==n))||((r+1==n)&&(c+1==m));
+	correct=((r==m)&&(c==n))||((r==n)&&(c==m));
 	if correct,
 	  correct_classifications(idx_jitter,idx_tx_jitter,idx_noise_level,trial)=correct_classifications(idx_jitter,idx_tx_jitter,idx_noise_level,trial)+1;
 	end
@@ -141,7 +167,10 @@ for trial=1:ntrials,
   end
 end
 
+fclose(fp);
+
 % Build basic ROC plot
+figure
 roc=squeeze(sum(sum(sum(correct_classifications,1),2),4))/(numel(jitters)*numel(tx_jitters)*ntrials);
 semilogx(noise_levels,roc);
 ylim([0,1]);
