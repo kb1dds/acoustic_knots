@@ -1,5 +1,7 @@
 # Plotting PCA of the signature space in a standardized way
 
+library(tidyverse)
+
 target_name <- c('coke_bottle','cup_open','cup_capped','pipe_open','pipe_capped')
 
 for(target in target_name ){
