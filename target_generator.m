@@ -179,7 +179,7 @@ scatloc_n=scatloc_n+randn(size(scatloc_n))*jitter;
 scatloc=[scatloc_m; scatloc_n];
 
 % Construct scatterer cross sections
-scatcross=ones(size(scatloc,1),1);
+scatcross=ones(size(scatloc,1),1).*exp(sqrt(-1)*2*pi*randn(size(scatloc,1),1)*90/360);
 
 fp=fopen([target_name{target_idx} '_scatterers.csv'],'wt');
 fdisp(fp,'x,y,cross_mag,cross_phase');

@@ -39,8 +39,8 @@ tx_jitter = 0.01; % (meters)
 rx_jitter = 0.01; % (meters)
 lock_platform_jitter = 0; % Nonzero if rx and tx jitter components are identical; rx_jitter is ignored in that case
 
-% Scatterer relative rotation angle (deg)
-offset_angle=28;
+% Scatterer center offset
+target_center = [0.01,0.005]; % (meters)
 
 % Number of measurements to collect
 nlooks = 360;
@@ -66,7 +66,7 @@ for target_idx = 1:numel(target_name),
 
 % Data pulled from CSV file
 data = dlmread([target_name{target_idx} '_scatterers.csv'],',',1,0);
-scatloc=data(:,1:2);
+scatloc=bsxfun(@plus,data(:,1:2),target_center);
 scatcross=data(:,3).*exp(sqrt(-1)*data(:,4));
 
 % Construct transmitter and receiver locations
@@ -144,5 +144,7 @@ print('-dpng',[target_name{target_idx} '_signature.png']);
 % Saves mat file
 save([target_name{target_idx} ".mat"], "echos", "rxloc", "txloc", "scatloc")
 
+% Save CSV file
+csvwrite([target_name{target_idx} "_echos.csv"],echos);
 end
 
