@@ -10,11 +10,16 @@ for(file in dir('.')){
     noiselevel=as.numeric(substring(file,first=17,last=nchar(file)-4));
     print(noiselevel);
     
-    data<-read_csv(file,col_names=FALSE);
-    
-    pcadata <- data %>% 
+    data<-read_csv(file,col_names=FALSE) %>% 
       mutate(across(everything(),as.complex)) %>% 
-      mutate(across(everything(),abs)) %>% 
+      mutate(across(everything(),abs)) 
+  
+    sliding <- cbind(data,
+                     data[c(25:360,1:24),],
+                     data[c(4:360,1:3),])/sqrt(3)
+
+    
+    pcadata <- sliding %>% 
       prcomp()
     
     p <- pcadata$x %>% 
@@ -25,26 +30,33 @@ for(file in dir('.')){
     
     print(p)
     
-#    diag <- data %>% 
-#        mutate(across(everything(),as.complex)) %>% 
-#        mutate(across(everything(),abs)) %>%
-#        ripsDiag(maxdimension = 2,
-#                 maxscale = 0.2)
-#
-#    diagram <- tibble(dimension=diag$diagram[,1],
-#                      birth=diag$diagram[,2],
-#                      death=diag$diagram[,3])
-#  
-#    noisedata <- noisedata %>% 
-#       bind_rows(diagram %>% 
-#          filter(dimension == 1) %>%
-#        summarize(md = max(death)) %>%
-#      mutate(noiselevel=noiselevel) %>% 
-#      first())
+    diag <- sliding %>% 
+        ripsDiag(maxdimension = 1,
+                 maxscale = 0.7)
+
+    diagram <- tibble(dimension=diag$diagram[,1],
+                      birth=diag$diagram[,2],
+                      death=diag$diagram[,3]) %>%
+      mutate(persistence=death-birth)
+  
+    noisedata <- noisedata %>% 
+       bind_rows(diagram %>% 
+          filter(dimension == 1) %>%
+        summarize(mp = max(persistence)) %>%
+      mutate(noiselevel=noiselevel) %>% 
+      first())
   }
 }
 
 noisedata %>% 
-  ggplot(aes(x=noiselevel,y=md)) +
-  geom_point()
+  filter(noiselevel < 0.025) %>%
+  ggplot(aes(x=noiselevel,y=mp)) +
+  geom_line() + 
+  xlab('Noise level') +
+  ylab('Maximum persistence')
   
+diagram %>% 
+  mutate(dimension=as.factor(dimension)) %>%
+  ggplot(aes(x=birth,y=death,color=dimension)) + 
+  geom_point()
+
