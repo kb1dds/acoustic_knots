@@ -136,7 +136,7 @@ print('-dpng',[target_name{target_idx} '_echos.png']);
 
 figure
 colormap gray
-plot(theta_platform*180/pi,sqrt(sum(abs(echos.^2),2)));
+plot(theta_platform*180/pi,sqrt(sum(abs(echos.^2),2)),'linewidth',2);
 xlim([0,360])
 xlabel('Look angle (deg)')
 ylabel('Sonar cross section')
