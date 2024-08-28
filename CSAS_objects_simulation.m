@@ -120,7 +120,7 @@ caxis([0,0.02])
 colorbar
 xlabel('Frequency (Hz)')
 ylabel('Look angle (deg)')
-print('-dpng',[target_name{target_idx} '_echos.png']);
+print('-dpng',[target_name{target_idx} '_acoustic_color.png']);
 
 figure
 colormap gray
@@ -128,10 +128,11 @@ imagesc(abs(ifft(echos,[],2)))
 set(gca,'ydir','normal');
 axis normal
 caxis([0,0.02])
+xlim([0,50])
 colorbar
 xlabel('Time (samples)')
 ylabel('Look angle (deg)');
-print('-dpng',[target_name{target_idx} '_acoustic_color.png']);
+print('-dpng',[target_name{target_idx} '_echos.png']);
 
 figure
 rangeVector=bsxfun(@minus,permute(echos,[1 3 2]),permute(echos,[3 1 2]));
