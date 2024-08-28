@@ -135,6 +135,14 @@ ylabel('Look angle (deg)');
 print('-dpng',[target_name{target_idx} '_echos.png']);
 
 figure
+colormap gray
+plot(theta_platform*180/pi,sqrt(sum(abs(echos.^2),2)));
+xlim([0,360])
+xlabel('Look angle (deg)')
+ylabel('Sonar cross section')
+print('-dpng',[target_name{target_idx} '_crosssection.png']);
+
+figure
 rangeVector=bsxfun(@minus,permute(echos,[1 3 2]),permute(echos,[3 1 2]));
 dst=sqrt(sum(abs(rangeVector).^2,3));
 coords=pcoa(dst,3);
