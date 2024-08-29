@@ -3,7 +3,8 @@ library(tidyverse)
 library(TDA)
 
 noisedata <- tibble(noiselevel=c(), 
-                    md=c())
+                    death=c(),
+                    persistence=c())
 
 for(file in dir('.')){
   if( grepl('pipe_open_echos_',file)){
@@ -38,25 +39,33 @@ for(file in dir('.')){
                       birth=diag$diagram[,2],
                       death=diag$diagram[,3]) %>%
       mutate(persistence=death-birth)
+    
+    q <- diagram %>% 
+      mutate(dimension=as.factor(dimension)) %>%
+      ggplot(aes(x=birth,y=death,color=dimension)) + 
+      geom_point() + 
+      xlim(0,0.3) + ylim(0,0.3) +
+      scale_color_manual(values=c('0'='black','1'='red')) + 
+      geom_abline(slope=1,intercept=0)
+    
+    print(q)
   
     noisedata <- noisedata %>% 
        bind_rows(diagram %>% 
-          filter(dimension == 1) %>%
-        summarize(mp = max(persistence)) %>%
-      mutate(noiselevel=noiselevel) %>% 
-      first())
+                   filter(dimension==1) %>% 
+                   arrange(desc(persistence)) %>% 
+                   first() %>% 
+                   select(death,persistence) %>%
+                   mutate(noiselevel=noiselevel))
   }
 }
 
 noisedata %>% 
   filter(noiselevel < 0.025) %>%
-  ggplot(aes(x=noiselevel,y=mp)) +
+  pivot_longer(cols=c('death','persistence'),names_to='parameter',values_to='value') %>%
+  ggplot(aes(x=noiselevel,y=value,color=parameter)) +
   geom_line() + 
+  ylim(0,0.3) +
   xlab('Noise level') +
-  ylab('Maximum persistence')
-  
-diagram %>% 
-  mutate(dimension=as.factor(dimension)) %>%
-  ggplot(aes(x=birth,y=death,color=dimension)) + 
-  geom_point()
+  ylab('Parameter')
 
