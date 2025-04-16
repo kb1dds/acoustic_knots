@@ -62,10 +62,11 @@ for(file in dir('.')){
 
 noisedata %>% 
   filter(noiselevel < 0.025) %>%
+  mutate(SNR=10*log10(0.7/(noiselevel*10))) %>%
   pivot_longer(cols=c('death','persistence'),names_to='parameter',values_to='value') %>%
-  ggplot(aes(x=noiselevel,y=value,color=parameter)) +
+  ggplot(aes(x=SNR,y=value,linetype=parameter)) +
   geom_line() + 
   ylim(0,0.3) +
-  xlab('Noise level') +
+  xlab('SNR (dB)') +
   ylab('Parameter')
 
